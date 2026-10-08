@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Widget types — category, featured, location</title>
+<style>
+  /* Same hostile rules as partner-site.html. */
+  * { box-sizing: content-box; }
+  a { color: #b91c1c !important; text-decoration: underline !important; }
+  img { border: 4px dashed #b91c1c !important; filter: sepia(0.6) !important; }
+  h3, h4 { text-transform: uppercase !important; }
+
+  body {
+    font-family: Georgia, "Times New Roman", serif;
+    max-width: 900px; margin: 0 auto; padding: 40px 24px 96px;
+    line-height: 1.6; color: #1a2733; background: #fbfbf9;
+  }
+  h1 { font-size: 30px; margin: 0 0 6px; }
+  h2 { font-size: 20px; margin: 48px 0 6px; }
+  .expect {
+    font: 13px/1.6 ui-monospace, Menlo, Consolas, monospace;
+    background: #eef1f3; padding: 10px 12px; border-radius: 6px; margin: 0 0 16px;
+  }
+  .pair { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+  .pair h4 { font-size: 13px; margin: 0 0 8px; }
+  @media (max-width: 760px) { .pair { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+
+<h1>Widget types on one page</h1>
+<p>One loader, one renderer file. Network tab should show <code>r/listing.js?v=1.2.0</code>
+exactly once for all six embeds below.</p>
+
+<!-- ============================================================ CATEGORY -->
+<h2>Category — Food &amp; Culture</h2>
+<p class="expect">
+  Expect 3: Rann of Kutch full moon camp · Old Delhi food walk · Konkan coast fishing village stay<br>
+  (ordered by rating, highest first)
+</p>
+<div data-weyfarin="pk_test_f4f65afc3b7fd0f58afa935e64ff5f32"></div>
+
+<!-- ============================================================ FEATURED -->
+<h2>Featured — homepage banner</h2>
+<p class="expect">
+  Expect 3, in curated order, each with a badge:<br>
+  Spiti "Once a year" → Kaziranga "Staff pick" → Rann of Kutch "Full moon only"
+</p>
+<div data-weyfarin="pk_test_3f61db3d23ca2194d352c0cdbf55aa7d"></div>
+
+<!-- ============================================================ LOCATION -->
+<h2>Location — config default (Manali, 500 km)</h2>
+<p class="expect">
+  Expect 3, nearest first:<br>
+  Spiti 83 km · Markha Valley 215 km · Old Delhi 399 km
+</p>
+<div data-weyfarin="pk_test_79e8fb53c6383906e8d5459043c0bb24"></div>
+
+<h2>Location — same key, two hotels</h2>
+<p class="expect">
+  This is the hotel-chain case: one key, each property page sets its own coordinates.<br>
+  Kochi → Backwater boat 48.8 km · Silent Valley 129 km<br>
+  Jaipur → Old Delhi 240 km
+</p>
+<div class="pair">
+  <div>
+    <h4>Hotel in Kochi</h4>
+    <div data-weyfarin="pk_test_79e8fb53c6383906e8d5459043c0bb24"
+         data-lat="9.9312" data-lng="76.2673" data-layout="list" data-count="2"></div>
+  </div>
+  <div>
+    <h4>Hotel in Jaipur</h4>
+    <div data-weyfarin="pk_test_79e8fb53c6383906e8d5459043c0bb24"
+         data-lat="26.9124" data-lng="75.7873" data-layout="list" data-count="1"></div>
+  </div>
+</div>
+
+<h2>Location — nothing within radius</h2>
+<p class="expect">
+  Singapore has nothing within 500 km → the widget renders nothing at all.<br>
+  No empty box, no error on the page; one line in the console only if something actually failed.
+</p>
+<div data-weyfarin="pk_test_79e8fb53c6383906e8d5459043c0bb24"
+     data-lat="1.3521" data-lng="103.8198"></div>
+
+<script src="http://localhost:8000/v1.js" async></script>
+
+</body>
+</html>

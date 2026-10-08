@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Himalaya Notes — a fake partner blog</title>
+<style>
+  /* Deliberately hostile host CSS. If the widget still looks right, the
+     Shadow DOM isolation is doing its job. A widget built with plain classes
+     would be wrecked by every rule below. */
+  * { box-sizing: content-box; }
+  body {
+    font-family: Georgia, "Times New Roman", serif;
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 48px 24px 96px;
+    line-height: 1.7;
+    color: #1a2733;
+    background: #fbfbf9;
+  }
+  a { color: #b91c1c !important; text-decoration: underline !important; }
+  img { border: 4px dashed #b91c1c !important; filter: sepia(0.6) !important; }
+  h1 { font-size: 34px; line-height: 1.2; margin: 0 0 8px; }
+  h3, h4 { font-family: Georgia, serif !important; text-transform: uppercase !important; }
+  p { margin: 0 0 18px; }
+  .kicker { color: #6b7a88; font-size: 14px; margin-bottom: 28px; }
+  .rule { border: 0; border-top: 1px solid #dfe3e6; margin: 40px 0; }
+  .note { font-size: 13px; color: #6b7a88; background: #f1f4f6; padding: 12px 14px; border-radius: 6px; }
+  .sidebar { border: 1px solid #dfe3e6; padding: 18px; border-radius: 8px; }
+</style>
+</head>
+<body>
+
+<h1>Three weeks across Ladakh, and what I'd do differently</h1>
+<p class="kicker">Posted 14 September 2026</p>
+
+<p>The Markha Valley is the trek everyone recommends first, and for once the
+consensus is right. Six days, two passes, and homestays that cost less than a
+coffee in Delhi. What nobody tells you is how much the acclimatisation days at
+the start decide whether the whole thing is enjoyable or survivable.</p>
+
+<p>If you are planning something similar, these are the operators I ended up
+booking through. I get a small cut if you book, which I mention because you
+should assume that about every travel blog you read.</p>
+
+<hr class="rule">
+
+<!-- ============ THE EMBED. This is all a partner ever pastes. ============ -->
+<div data-weyfarin="pk_test_178c0c1884d9f14047ab9eb9f59056bc"></div>
+<script src="http://localhost:8000/v1.js" async></script>
+<!-- ======================================================================= -->
+
+<hr class="rule">
+
+<p>Back to the trek. The second pass, Kongmaru La at 5,260 m, is the one that
+breaks people. Start before five. The descent into Chokdo is longer than the
+map suggests and there is no shade for the last two hours.</p>
+
+<h3>A narrow sidebar, to test container breakpoints</h3>
+<p class="note">The widget below sits in a 300&nbsp;px column. It should collapse
+to a single column even on a wide screen, because breakpoints come from
+<code>ResizeObserver</code> on the container, not from viewport media queries.</p>
+
+<div class="sidebar" style="width:300px">
+  <div data-weyfarin="pk_test_178c0c1884d9f14047ab9eb9f59056bc" data-layout="list" data-count="3"></div>
+</div>
+
+<hr class="rule">
+
+<h3>Carousel variant, accent overridden inline</h3>
+<div data-weyfarin="pk_test_178c0c1884d9f14047ab9eb9f59056bc"
+     data-layout="carousel"
+     data-columns="3"
+     data-accent="#b4531f"
+     data-radius="2px"></div>
+
+<hr class="rule">
+
+<h3>Iframe fallback</h3>
+<p class="note">For hosts that strip <code>&lt;script&gt;</code>. Fixed height
+here; the resize listener below makes it grow with content.</p>
+
+<iframe
+  src="http://localhost:8000/embed/pk_test_178c0c1884d9f14047ab9eb9f59056bc/frame"
+  title="Weyfarin experiences"
+  width="100%"
+  height="520"
+  style="border:0;display:block;max-width:100%"
+  loading="lazy"></iframe>
+
+<script>
+window.addEventListener('message', function (event) {
+  if (event.origin !== 'http://localhost:8000') return;
+  if (event.data && event.data.weyfarin === 'resize') {
+    var frame = document.querySelector('iframe[src*="' + event.data.key + '"]');
+    if (frame) frame.style.height = event.data.height + 'px';
+  }
+});
+</script>
+
+</body>
+</html>

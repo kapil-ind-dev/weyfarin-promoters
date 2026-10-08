@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ABC Travels — Experiences</title>
+<style>
+  /* ABC Travels' own site. Header, footer and fonts are theirs; the
+     catalogue in the middle is the Weyfarin search widget. */
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: "Helvetica Neue", Arial, sans-serif; color: #111; background: #fff; }
+  a { color: inherit; }
+  .bar { display: flex; align-items: center; gap: 28px; max-width: 1200px; margin: 0 auto; padding: 18px 24px; }
+  .bar .logo { font-weight: 800; font-size: 17px; letter-spacing: -.02em; text-decoration: none; }
+  .bar nav { display: flex; gap: 22px; font-size: 14px; color: #555; }
+  .bar nav a { text-decoration: none; }
+  .bar .right { margin-left: auto; font-size: 14px; color: #555; }
+  header { border-bottom: 1px solid #eee; }
+  main { max-width: 1200px; margin: 0 auto; padding: 40px 24px 80px; }
+  footer { background: #f5f5f5; margin-top: 40px; }
+  footer .cols { display: grid; grid-template-columns: repeat(4, 1fr); gap: 24px; max-width: 1200px; margin: 0 auto;
+                 padding: 40px 24px; font-size: 13px; color: #555; }
+  footer strong { display: block; color: #111; margin-bottom: 10px; }
+  @media (max-width: 700px) { .bar nav { display: none; } footer .cols { grid-template-columns: 1fr 1fr; } }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="bar">
+    <a class="logo" href="catalog.html">ABC Travels</a>
+    <nav><a href="#">Search destination</a><a href="#">Activities</a><a href="#">Experiences</a></nav>
+    <div class="right">My Bookings &nbsp;·&nbsp; Log in / Sign up</div>
+  </div>
+</header>
+
+<main>
+  <!-- ============ THE EMBED — all ABC Travels pasted. ============ -->
+  <div data-weyfarin="pk_test_415594444f066f25e40c38ff81564d12" data-accent="#111111" data-count="6"></div>
+  <script src="http://localhost:8000/v1.js" async></script>
+  <!-- ============================================================ -->
+</main>
+
+<footer>
+  <div class="cols">
+    <div><strong>ABC Travels</strong>For inquiries and assistance<br><a href="#">Contact Us</a></div>
+    <div><strong>About Us</strong>About ABC Travels<br>Contact us<br>Help Center (FAQ)<br>Blogs</div>
+    <div><strong>Useful Links</strong>Terms and Condition<br>Privacy Policy<br>Cancellation Policy</div>
+    <div><strong>Subscribe Our Newsletter</strong>Get the latest updates from us.</div>
+  </div>
+</footer>
+
+<script>
+  // The partner can listen for checkout intent from outside the widget —
+  // for their own analytics, or later to open their own flow.
+  document.addEventListener('weyfarin:checkout', function (event) {
+    console.log('[ABC Travels] checkout intent', event.detail);
+  });
+</script>
+</body>
+</html>

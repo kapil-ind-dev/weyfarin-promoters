@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Detail widget — standalone</title>
+<style>
+  * { box-sizing: content-box; }
+  a { color: #b91c1c !important; }
+  img { border: 4px dashed #b91c1c !important; filter: sepia(.6) !important; }
+  body { font-family: Georgia, serif; max-width: 1100px; margin: 0 auto; padding: 40px 24px 80px; color: #1a2733; background: #fbfbf9; }
+  h1 { font-size: 28px; margin: 0 0 8px; }
+  .sidebar { width: 360px; border: 1px solid #dfe3e6; border-radius: 8px; padding: 16px; margin-top: 48px; }
+</style>
+</head>
+<body>
+
+<h1>Detail widget — one experience, inline</h1>
+<p>Widget type <code>detail</code>. No search, no back link, no URL changes.
+Same hostile CSS as the other demo pages.</p>
+
+<div data-weyfarin="pk_test_dd98e32a44f95645f3b04191289b5715"></div>
+
+<h1 style="margin-top:56px">Same widget in a 360 px column</h1>
+<p>Single column, gallery becomes a swipeable strip, booking card drops below the content.</p>
+<div class="sidebar">
+  <div data-weyfarin="pk_test_dd98e32a44f95645f3b04191289b5715"></div>
+</div>
+
+<script src="http://localhost:8000/v1.js" async></script>
+</body>
+</html>

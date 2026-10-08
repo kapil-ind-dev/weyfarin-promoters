@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Day 1 gate — Stripe Elements slot-pattern spike</title>
+
+<!-- Stripe.js always loads from js.stripe.com, on the host page. The real
+     booking renderer will inject this tag on "Book now", not on page load. -->
+<script src="https://js.stripe.com/v3/"></script>
+
+<style>
+  /* ---------------------------------------------------------------
+     Deliberately hostile partner CSS.
+     The iframe rule is the one that matters: the slot pattern puts
+     Stripe's <iframe> in the LIGHT DOM, so page CSS reaches the iframe
+     element (not the card fields inside it). WordPress themes ship
+     rules like this for YouTube embeds all the time.
+     --------------------------------------------------------------- */
+  * { box-sizing: content-box; }
+  iframe { filter: sepia(0.8) !important; max-width: 320px !important; }
+  div { line-height: 2.4; }
+  input { border: 3px dashed #b91c1c !important; }
+  a { color: #b91c1c !important; }
+
+  body {
+    font-family: Georgia, "Times New Roman", serif;
+    max-width: 760px; margin: 0 auto; padding: 40px 20px 80px;
+    color: #1a2733; background: #fbfbf9; line-height: 1.6;
+  }
+  h1 { font-size: 28px; line-height: 1.2; margin: 0 0 6px; }
+  h2 { font-size: 19px; margin: 40px 0 8px; }
+  p { margin: 0 0 12px; }
+  code { font-size: .9em; }
+  .note { font-size: 13px; color: #5b6875; background: #eef1f3; padding: 10px 12px; border-radius: 6px; line-height: 1.6; }
+  .cards { font: 13px/1.7 ui-monospace, Menlo, Consolas, monospace; }
+  table.results { border-collapse: collapse; width: 100%; font: 13px/1.45 ui-monospace, Menlo, Consolas, monospace; margin-top: 8px; }
+  .results td { border-top: 1px solid #dfe3e6; padding: 7px 8px; vertical-align: top; }
+  .results td:first-child { width: 52px; }
+  .PASS { color: #0f7b3e; font-weight: 700; }
+  .FAIL { color: #b91c1c; font-weight: 700; }
+  .INFO { color: #8a6d00; font-weight: 700; }
+  .WAIT { color: #8592a0; }
+  .manual button { font: 13px system-ui, sans-serif; padding: 6px 12px; margin: 6px 6px 0 0; cursor: pointer; }
+  pre.log {
+    background: #0f1720; color: #cfe3d6; font: 12px/1.55 ui-monospace, Menlo, Consolas, monospace;
+    padding: 12px; border-radius: 6px; max-height: 280px; overflow: auto; white-space: pre-wrap; line-height: 1.55;
+  }
+</style>
+</head>
+<body>
+
+<h1>Day 1 gate — Stripe slot-pattern spike</h1>
+<p class="note">
+  Served from a different origin than the API, on purpose. Every row in the table
+  must be <b>PASS</b> (the direct-mount row may be INFO) on Chrome, Firefox,
+  desktop Safari and iOS Safari before the inline booking widget is built.
+  Any <b>FAIL</b> on <i>visible</i> or <i>confirm</i> → switch to the popup fallback (PLAN.md D6).
+</p>
+
+<p class="cards">
+  4242 4242 4242 4242 — succeeds<br>
+  4000 0027 6000 3184 — 3DS challenge, then succeeds<br>
+  4000 0000 0000 9995 — declined (insufficient funds)<br>
+  Any future expiry, any CVC, any postcode.
+</p>
+
+<p class="note">
+  Query params: <code>?api=http://192.168.1.20:8000</code> to point at another host (phones),
+  <code>?currency=sgd</code> if your test account rejects INR,
+  <code>?guard=0</code> to disable the iframe CSS guard and watch the hostile rule win.
+</p>
+
+<h2>Results</h2>
+<table class="results"><tbody id="results"></tbody></table>
+
+<h2>A. Checkout — Payment Element mounted through a slot</h2>
+<p class="note">The summary and button live inside the shadow root. The Stripe mount point is a
+light-DOM child of the host, positioned by <code>&lt;slot name="wf-pay"&gt;</code>.</p>
+<div id="hostA"></div>
+
+<h2>B. Control — Payment Element mounted directly inside the shadow root</h2>
+<p class="note">Expected to be rejected. This is the behaviour the slot pattern exists to avoid.</p>
+<div id="hostB"></div>
+
+<h2>C. Autofill — guest form inside a shadow root</h2>
+<p class="note">Click into the name field and pick a saved address from the browser's autofill
+prompt. Then record what happened. iOS Safari is the browser that matters most here (PLAN.md R2).</p>
+<div id="hostC"></div>
+<p class="manual">
+  <button type="button" id="autofillYes">Autofill filled the fields</button>
+  <button type="button" id="autofillNo">No autofill prompt / fields stayed empty</button>
+</p>
+
+<h2>Log</h2>
+<pre class="log" id="log"></pre>
+
+<script>
+(function () {
+  'use strict';
+
+  var params   = new URLSearchParams(location.search);
+  var API      = (params.get('api') || 'http://localhost:8000').replace(/\/$/, '') + '/api/spike';
+  var CURRENCY = params.get('currency') || 'inr';
+  var GUARD_ON = params.get('guard') !== '0';
+
+  // ------------------------------------------------------------ results + log
+
+  var logEl = document.getElementById('log');
+
+  function log(message) {
+    var time = new Date().toISOString().slice(11, 19);
+    logEl.textContent += '[' + time + '] ' + message + '\n';
+    logEl.scrollTop = logEl.scrollHeight;
+  }
+
+  var CHECKS = [
+    ['stripe',   'Stripe.js loaded on the host page'],
+    ['config',   'Config endpoint reachable cross-origin'],
+    ['ready',    'Payment Element mounted through the slot (ready event)'],
+    ['visible',  'Slotted element renders inside the shadow layout'],
+    ['guard',    'Hostile iframe CSS neutralised by the scoped guard'],
+    ['confirm',  'confirmPayment succeeded in the browser'],
+    ['server',   'Server retrieves the PaymentIntent as succeeded'],
+    ['threeds',  '3DS challenge overlay completed'],
+    ['direct',   'Direct shadow-root mount rejected (control)'],
+    ['autofill', 'Browser autofill fills the shadow-DOM guest form']
+  ];
+
+  var rows = {};
+  var tbody = document.getElementById('results');
+
+  CHECKS.forEach(function (check) {
+    var tr = document.createElement('tr');
+    var status = document.createElement('td');
+    var label  = document.createElement('td');
+    var detail = document.createElement('td');
+    status.className = 'WAIT';
+    status.textContent = 'WAIT';
+    label.textContent = check[1];
+    tr.appendChild(status);
+    tr.appendChild(label);
+    tr.appendChild(detail);
+    tbody.appendChild(tr);
+    rows[check[0]] = tr;
+  });
+
+  function mark(id, status, detail) {
+    var tr = rows[id];
+    tr.children[0].className = status;
+    tr.children[0].textContent = status;
+    tr.children[2].textContent = detail || '';
+    log(status + '  ' + id + (detail ? ' — ' + detail : ''));
+  }
+
+  log('UA: ' + navigator.userAgent);
+  log('API: ' + API + '   currency: ' + CURRENCY + '   guard: ' + (GUARD_ON ? 'on' : 'OFF'));
+
+  if (params.get('payment_intent')) {
+    log('Returned from a redirect for ' + params.get('payment_intent') + ' — cards should never redirect with redirect:"if_required".');
+  }
+
+  // ---------------------------------------------------------- shadow styles
+
+  var SHADOW_CSS = [
+    ':host{all:initial;display:block}',
+    '*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}',
+    '.wf{font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;color:#111;',
+    'font-size:15px;line-height:1.45;background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:18px}',
+    '.wf-summary{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;',
+    'padding-bottom:14px;margin-bottom:16px;border-bottom:1px solid #e5e7eb}',
+    '.wf-summary strong{display:block;font-weight:620}',
+    '.wf-summary span{display:block;font-size:.85em;color:#6b7280;margin-top:2px}',
+    '.wf-total{font-weight:650;white-space:nowrap}',
+    '.wf-pay-btn{display:block;width:100%;padding:12px 16px;border:0;border-radius:8px;',
+    'background:#0f5c4d;color:#fff;font:inherit;font-weight:600;cursor:pointer}',
+    '.wf-pay-btn[disabled]{opacity:.55;cursor:default}',
+    '.wf-msg{margin-top:10px;font-size:.85em;color:#6b7280;min-height:1.2em}',
+    '.wf-form label{display:block;font-size:.8em;color:#6b7280;margin:0 0 4px}',
+    '.wf-form input{display:block;width:100%;padding:10px 12px;border:1px solid #d1d5db;',
+    'border-radius:8px;font:inherit;margin-bottom:12px;background:#fff;color:#111}',
+    '.wf-form input:focus{outline:2px solid #0f5c4d;outline-offset:1px}'
+  ].join('');
+
+  // ---------------------------------------------------- C. autofill (no Stripe)
+
+  (function buildAutofillForm() {
+    var shadow = document.getElementById('hostC').attachShadow({ mode: 'open' });
+    shadow.innerHTML =
+      '<style>' + SHADOW_CSS + '</style>' +
+      '<form class="wf wf-form" autocomplete="on">' +
+        '<label for="g-name">Full name</label>' +
+        '<input id="g-name" name="name" autocomplete="name" type="text">' +
+        '<label for="g-email">Email</label>' +
+        '<input id="g-email" name="email" autocomplete="email" type="email">' +
+        '<label for="g-tel">Mobile</label>' +
+        '<input id="g-tel" name="tel" autocomplete="tel" type="tel">' +
+        '<label for="g-country">Country</label>' +
+        '<input id="g-country" name="country" autocomplete="country-name" type="text">' +
+      '</form>';
+    shadow.querySelector('form').addEventListener('submit', function (event) { event.preventDefault(); });
+
+    document.getElementById('autofillYes').addEventListener('click', function () {
+      mark('autofill', 'PASS', 'confirmed manually');
+    });
+    document.getElementById('autofillNo').addEventListener('click', function () {
+      mark('autofill', 'FAIL', 'guest form will move to light DOM with prefixed classes (PLAN.md R2)');
+    });
+  })();
+
+  // ------------------------------------------------------------- A. checkout
+
+  function buildCheckout(cfg) {
+    var host = document.getElementById('hostA');
+    var shadow = host.attachShadow({ mode: 'open' });
+    var total = new Intl.NumberFormat('en', { style: 'currency', currency: cfg.currency.toUpperCase() })
+      .format(cfg.amount / 100);
+
+    shadow.innerHTML =
+      '<style>' + SHADOW_CSS + '</style>' +
+      '<div class="wf">' +
+        '<div class="wf-summary">' +
+          '<div><strong>Jaisalmer Private Golden City Heritage Experience</strong>' +
+          '<span>Tue, 28 Sep 2026 · 1 traveller</span></div>' +
+          '<div class="wf-total"></div>' +
+        '</div>' +
+        '<slot name="wf-pay"></slot>' +
+        '<button class="wf-pay-btn" type="button" disabled>Loading payment form…</button>' +
+        '<p class="wf-msg" role="status"></p>' +
+      '</div>';
+
+    shadow.querySelector('.wf-total').textContent = total;
+
+    // The mount point: a LIGHT-DOM child of the host, projected by the slot.
+    var mountId = 'wf-pay-' + Math.random().toString(36).slice(2, 10);
+    var mountEl = document.createElement('div');
+    mountEl.id = mountId;
+    mountEl.setAttribute('slot', 'wf-pay');
+    mountEl.style.cssText = 'display:block;margin:0 0 14px;padding:0;border:0;max-width:none;line-height:normal';
+    host.appendChild(mountEl);
+
+    // Guard: an ID selector with !important outranks a partner's element
+    // selector with !important. Stripe's own inline !important styles
+    // (width, border, display) still win over both, which is what we want.
+    if (GUARD_ON) {
+      var guard = document.createElement('style');
+      guard.setAttribute('data-weyfarin-guard', mountId);
+      guard.textContent = '#' + mountId + ' iframe{' +
+        'filter:none!important;transform:none!important;opacity:1!important;' +
+        'max-width:none!important;visibility:visible!important;clip-path:none!important}';
+      document.head.appendChild(guard);
+    }
+
+    return {
+      mountEl: mountEl,
+      button: shadow.querySelector('.wf-pay-btn'),
+      message: shadow.querySelector('.wf-msg'),
+      total: total
+    };
+  }
+
+  function checkVisible(mountEl) {
+    var height = mountEl.getBoundingClientRect().height;
+    var slotted = !!mountEl.assignedSlot;
+    mark('visible', slotted && height > 40 ? 'PASS' : 'FAIL',
+      'assignedSlot=' + slotted + ', height=' + Math.round(height) + 'px');
+  }
+
+  function checkGuard(mountEl) {
+    var frame = mountEl.querySelector('iframe');
+    if (!frame) {
+      mark('guard', 'FAIL', 'no iframe inside the mount point');
+      return;
+    }
+    var computed = getComputedStyle(frame);
+    var clean = computed.filter === 'none' && computed.maxWidth === 'none';
+    var detail = 'filter=' + computed.filter + ', max-width=' + computed.maxWidth;
+    if (GUARD_ON) {
+      mark('guard', clean ? 'PASS' : 'FAIL', detail);
+    } else {
+      mark('guard', clean ? 'INFO' : 'INFO', detail + ' — guard disabled (?guard=0); hostile rule expected to win');
+    }
+  }
+
+  function newIdempotencyKey() {
+    return 'k' + Date.now().toString(36) + Math.random().toString(36).slice(2, 10);
+  }
+
+  function runCheckout(stripe, cfg) {
+    var ui = buildCheckout(cfg);
+
+    // Deferred-intent pattern: render the form first, create the
+    // PaymentIntent only when the user clicks Pay. Matches the real flow,
+    // where the booking row + intent are created at submit, not on page view.
+    var elements = stripe.elements({
+      mode: 'payment',
+      amount: cfg.amount,
+      currency: cfg.currency,
+      // No paymentMethodTypes: must match the server, which now uses
+      // automatic_payment_methods. Methods come from the Stripe Dashboard.
+      appearance: {
+        theme: 'stripe',
+        variables: { colorPrimary: '#0f5c4d', borderRadius: '8px', fontFamily: 'system-ui, sans-serif' }
+      }
+    });
+
+    var paymentElement = elements.create('payment', { layout: 'tabs' });
+
+    paymentElement.on('ready', function () {
+      mark('ready', 'PASS');
+      ui.button.disabled = false;
+      ui.button.textContent = 'Pay ' + ui.total;
+      setTimeout(function () {
+        checkVisible(ui.mountEl);
+        checkGuard(ui.mountEl);
+      }, 400);
+    });
+
+    paymentElement.on('loaderror', function (event) {
+      mark('ready', 'FAIL', event.error ? event.error.message : 'loaderror');
+    });
+
+    try {
+      paymentElement.mount(ui.mountEl);
+    } catch (error) {
+      mark('ready', 'FAIL', error.message);
+      return;
+    }
+
+    ui.button.addEventListener('click', async function () {
+      ui.button.disabled = true;
+      ui.message.textContent = 'Processing…';
+
+      var submitted = await elements.submit();
+      if (submitted.error) {
+        ui.message.textContent = submitted.error.message;
+        ui.button.disabled = false;
+        return;
+      }
+
+      var intent;
+      try {
+        var response = await fetch(API + '/intents', {
+          method: 'POST',
+          credentials: 'omit',
+          headers: { 'Content-Type': 'text/plain;charset=UTF-8' },
+          body: JSON.stringify({ currency: cfg.currency, idempotency_key: newIdempotencyKey() })
+        });
+        intent = await response.json();
+        if (!response.ok) throw new Error(intent.message || 'HTTP ' + response.status);
+        log('PaymentIntent ' + intent.id + ' created');
+      } catch (error) {
+        mark('confirm', 'FAIL', 'creating intent: ' + error.message);
+        ui.message.textContent = error.message;
+        ui.button.disabled = false;
+        return;
+      }
+
+      var result = await stripe.confirmPayment({
+        elements: elements,
+        clientSecret: intent.client_secret,
+        confirmParams: { return_url: location.href.split('#')[0] },
+        redirect: 'if_required'
+      });
+
+      if (result.error) {
+        // A decline is a correct outcome for 4000 0000 0000 9995, not a spike failure.
+        var declined = result.error.type === 'card_error';
+        mark('confirm', declined ? 'INFO' : 'FAIL', result.error.message +
+          (declined ? ' — decline path works; retry with 4242…' : ''));
+        ui.message.textContent = result.error.message;
+        ui.button.disabled = false;
+        return;
+      }
+
+      var status = result.paymentIntent && result.paymentIntent.status;
+      mark('confirm', status === 'succeeded' ? 'PASS' : 'INFO', 'status=' + status);
+
+      try {
+        var verify = await fetch(API + '/intents/' + encodeURIComponent(intent.id), { credentials: 'omit' });
+        var server = await verify.json();
+        if (!verify.ok) throw new Error(server.message || 'HTTP ' + verify.status);
+
+        mark('server', server.status === 'succeeded' ? 'PASS' : 'FAIL',
+          'status=' + server.status + ', ' + (server.card_brand || '?') + ' •••• ' + (server.last4 || '????') +
+          ', ' + server.currency.toUpperCase() + ' ' + server.amount);
+
+        if (server.three_d_secure) {
+          mark('threeds', server.three_d_secure === 'authenticated' ? 'PASS' : 'INFO',
+            '3DS result=' + server.three_d_secure);
+        } else if (rows.threeds.children[0].textContent === 'WAIT') {
+          mark('threeds', 'INFO', 'not exercised — pay again with 4000 0027 6000 3184');
+        }
+      } catch (error) {
+        mark('server', 'FAIL', error.message);
+      }
+
+      ui.message.textContent = 'Paid. In the real flow the webhook confirms the booking.';
+      ui.button.textContent = 'Pay again (try another test card)';
+      ui.button.disabled = false;
+    });
+  }
+
+  // ----------------------------------------------------- B. direct mount control
+
+  function runDirectMountControl(stripe, cfg) {
+    var shadow = document.getElementById('hostB').attachShadow({ mode: 'open' });
+    shadow.innerHTML = '<style>:host{all:initial;display:block}div{min-height:24px}</style><div></div>';
+    var target = shadow.querySelector('div');
+
+    var elements = stripe.elements({
+      mode: 'payment', amount: cfg.amount, currency: cfg.currency
+    });
+    var element = elements.create('payment');
+    var settled = false;
+
+    element.on('loaderror', function (event) {
+      if (settled) return;
+      settled = true;
+      mark('direct', 'PASS', 'rejected via loaderror: ' + (event.error ? event.error.message : '?'));
+    });
+
+    element.on('ready', function () {
+      if (settled) return;
+      settled = true;
+      mark('direct', 'INFO', 'mounted without error — Stripe behaviour may have changed. ' +
+        'The slot pattern stays the plan; do not switch to direct mount without testing confirmPayment.');
+    });
+
+    try {
+      element.mount(target);
+    } catch (error) {
+      settled = true;
+      mark('direct', 'PASS', 'rejected: ' + error.message);
+    }
+
+    setTimeout(function () {
+      if (!settled) mark('direct', 'INFO', 'no ready or error event after 8 s');
+    }, 8000);
+  }
+
+  // ------------------------------------------------------------------- boot
+
+  (async function boot() {
+    if (typeof window.Stripe !== 'function') {
+      mark('stripe', 'FAIL', 'window.Stripe missing — js.stripe.com blocked or offline');
+      return;
+    }
+    mark('stripe', 'PASS');
+
+    var cfg;
+    try {
+      var response = await fetch(API + '/config?currency=' + encodeURIComponent(CURRENCY), { credentials: 'omit' });
+      cfg = await response.json();
+      if (!response.ok) throw new Error(cfg.message || 'HTTP ' + response.status);
+      mark('config', 'PASS', cfg.currency.toUpperCase() + ' ' + cfg.amount + ' minor units');
+    } catch (error) {
+      mark('config', 'FAIL', error.message + ' — is php artisan serve running, and is the API URL right?');
+      return;
+    }
+
+    var stripe = window.Stripe(cfg.publishable_key);
+
+    runCheckout(stripe, cfg);
+    runDirectMountControl(stripe, cfg);
+  })();
+})();
+</script>
+</body>
+</html>
