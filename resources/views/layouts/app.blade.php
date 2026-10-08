@@ -4,9 +4,10 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>User Panel</title>
+    <title>Promoter Panel</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+    <link rel="shortcut icon" type="image/x-icon" href="{{ asset('favicon.ico')}}">
     <link href="{{ asset('assets/css/style.css') }}" rel="stylesheet">
 </head>
 
@@ -37,7 +38,7 @@
             <div class="modal-body text-center p-4 p-sm-5">
                 <button type="button" class="btn-close position-absolute top-0 end-0 m-3" data-bs-dismiss="modal" aria-label="Close"></button>
                 <div class="logout-ico mx-auto mb-3"><i class="bi bi-box-arrow-right"></i></div>
-                <h5 class="fw-bold mb-2" id="logoutTitle">Log out of UserPanel?</h5>
+                <h5 class="fw-bold mb-2" id="logoutTitle">Log out of Promoter Panel?</h5>
                 <p class="text-secondary mb-4">You'll need to sign in again to access your dashboard and preferences.</p>
                 <div class="d-flex flex-column flex-sm-row gap-2">
                 <button type="button" class="btn btn-outline-brand flex-fill" data-bs-dismiss="modal">Stay logged in</button>

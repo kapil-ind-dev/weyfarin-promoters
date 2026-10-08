@@ -17,8 +17,10 @@ Route::get('/refresh-captcha', function () {
     })->name('refresh-captcha');
 Route::middleware('auth:promoter')->group(function () {
     Route::get('/logout', [AuthController::class, 'logout'])->name('logout');
-    // Route::get('/profile', [AuthController::class, 'profile'])->name('profile');
-    // Route::post('/profile', [AuthController::class, 'profile_update'])->name('profile.update');
+    Route::get('/profile', [AuthController::class, 'profile'])->name('profile');
+    Route::put('/profile', [AuthController::class, 'profile_update'])->name('profile.update');
+    Route::get('/change-password', [AuthController::class, 'change_password'])->name('change-password.show');
+    Route::put('/change-password', [AuthController::class, 'password_update'])->name('password.update');
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
     Route::get('/customize-settings', [DashboardController::class, 'customize'])->name('customize-settings');
 });

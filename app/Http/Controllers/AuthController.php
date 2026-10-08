@@ -9,6 +9,8 @@ use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rules\Password;
 use Illuminate\Validation\ValidationException;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\Rule;
 
 class AuthController extends Controller
 {
@@ -100,6 +102,79 @@ class AuthController extends Controller
             'status' => true,
             'message' => 'Account created successfully. You can now log in.',
         ], 201);
+    }
+    public function profile(){
+        $user_id = Auth::id();
+        $user = Promoter::findOrFail($user_id);
+        return view('pages.profile', compact('user'));
+    }
+   public function profile_update(Request $request)
+    {
+        $user = Auth::user();
+        // dd($user);
+        $validated = $request->validate([
+            'first_name'   => ['required', 'string', 'max:50'],
+            'last_name'    => ['required', 'string', 'max:50'],
+            'email'        => ['required', 'email', 'max:255', Rule::unique('promoters', 'email')->ignore($user->id)],
+            'country_code' => ['nullable', 'string', 'regex:/^\+\d{1,4}$/'],
+            'phone'        => ['nullable', 'digits_between:6,15'],
+            'profile'      => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048'], // 2 MB
+        ]);
+    
+        // Handle profile photo upload
+        if ($request->hasFile('profile')) {
+            // delete the old photo if there is one
+            if ($user->profile && Storage::disk('public')->exists($user->profile)) {
+                Storage::disk('public')->delete($user->profile);
+            }
+    
+            $validated['profile'] = $request->file('profile')->store('profiles', 'public');
+        } else {
+            // no new file: keep the existing photo
+            unset($validated['profile']);
+        }
+    
+        $user->update($validated);
+    
+        return redirect()->back()->with('success', 'Profile updated successfully.');
+    }
+    
+    public function change_password()
+    {
+        return view('pages.change-password'); // resources/views/change-password.blade.php
+    }
+    
+    public function password_update(Request $request)
+    {
+        $user = auth()->user();
+    
+        $request->validate([
+            'current_password' => ['required', 'string'],
+            'new_password'     => [
+                'required',
+                'string',
+                'confirmed',                 // matches new_password_confirmation
+                'different:current_password',
+                Password::min(8)->letters()->mixedCase()->numbers()->symbols(),
+            ],
+        ], [
+            'new_password.confirmed' => 'The new password confirmation does not match.',
+            'new_password.different' => 'The new password must be different from the current password.',
+        ]);
+    
+        // Check the current password manually so we can attach the error to that field
+        if (! Hash::check($request->current_password, $user->password)) {
+            return back()
+                ->withErrors(['current_password' => 'The current password is incorrect.'])
+                ->withInput();
+        }
+    
+        $user->update([
+            'password' => Hash::make($request->new_password),
+        ]);
+    
+        return redirect()->route('change-password.show')
+            ->with('success', 'Password updated successfully.');
     }
     
     public function logout(Request $request)

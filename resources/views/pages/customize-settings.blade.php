@@ -66,26 +66,7 @@
                 </div>
                 <small class="text-secondary d-block mt-3">The main theme stays <strong>#352718</strong>; the accent colours highlights and badges.</small>
             </div>
-            <div class="panel mb-3">
-                <h6 class="fw-bold mb-3">Dashboard layout</h6>
-                <div class="row g-2" id="layouts">
-                    <div class="col-4">
-                        <div class="layout-opt on">
-                            <div class="mini"><i></i><i></i></div><small class="fw-semibold">Sidebar</small>
-                        </div>
-                    </div>
-                    <div class="col-4">
-                        <div class="layout-opt top">
-                            <div class="mini"><i></i><i></i></div><small class="fw-semibold">Top nav</small>
-                        </div>
-                    </div>
-                    <div class="col-4">
-                        <div class="layout-opt card">
-                            <div class="mini"><i></i><i></i><i></i></div><small class="fw-semibold">Cards</small>
-                        </div>
-                    </div>
-                </div>
-            </div>
+            
         </div>
         <div class="col-12">
             <div class="panel">

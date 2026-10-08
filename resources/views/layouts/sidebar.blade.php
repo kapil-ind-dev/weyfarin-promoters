@@ -7,7 +7,8 @@
         <a class="nav-link"><i class="bi bi-calendar3"></i>Calendar<i class="bi bi-chevron-right chev"></i></a>
         <a class="nav-link"><i class="bi bi-envelope"></i>Messages<i class="bi bi-chevron-right chev"></i></a>
         <a class="nav-link"><i class="bi bi-credit-card"></i>Billing<i class="bi bi-chevron-right chev"></i></a>
-        <a class="nav-link"><i class="bi bi-person-gear"></i>Account<i class="bi bi-chevron-right chev"></i></a>
+        <a class="nav-link @if(request()->routeIs('profile')) active @endif"  href="{{ route('profile') }}"><i class="bi bi-person-gear" ></i>Profile<i class="bi bi-chevron-right chev"></i></a>
+        <a class="nav-link @if(request()->routeIs('change-password.show')) active @endif"  href="{{ route('change-password.show') }}"><i class="bi bi-key" ></i>Change Password<i class="bi bi-chevron-right chev"></i></a>
         <a class="nav-link" href="javascript:void(0)" data-bs-toggle="modal" data-bs-target="#logoutModal"><i class="bi bi-box-arrow-right" ></i>Log out<i class="bi bi-chevron-right chev"></i></a>
     </div>
 </aside>
